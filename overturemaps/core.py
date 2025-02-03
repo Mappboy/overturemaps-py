@@ -14,11 +14,11 @@ except ImportError:
     HAS_GEOPANDAS = False
     GeoDataFrame = None
 
-def record_batch_reader(overture_type, bbox=None) -> Optional[pa.RecordBatchReader]:
+def record_batch_reader(overture_type, bbox=None, version="latest") -> Optional[pa.RecordBatchReader]:
     """
     Return a pyarrow RecordBatchReader for the desired bounding box and s3 path
     """
-    path = _dataset_path(overture_type)
+    path = _dataset_path(overture_type, version)
 
     if bbox:
         xmin, ymin, xmax, ymax = bbox
@@ -65,7 +65,7 @@ def geodataframe(overture_type: str, bbox: (float, float, float, float) = None) 
     if not HAS_GEOPANDAS:
         raise ImportError("geopandas is required to use this function")
 
-    reader = record_batch_reader(overture_type, bbox)
+    reader = record_batch_reader(overture_type, bbox, version="latest")
     return gpd.GeoDataFrame.from_arrow(reader)
 
 def geoarrow_schema_adapter(schema: pa.Schema) -> pa.Schema:
@@ -115,7 +115,8 @@ type_theme_map = {
 }
 
 
-def _dataset_path(overture_type: str) -> str:
+
+def _dataset_path(overture_type: str, version: str="2025-01-22.0") -> str:
     """
     Returns the s3 path of the Overture dataset to use. This assumes overture_type has
     been validated, e.g. by the CLI
@@ -125,8 +126,9 @@ def _dataset_path(overture_type: str) -> str:
     # complete s3 path. Could be discovered by reading from the top-level s3
     # location but this allows to only read the files in the necessary partition.
     theme = type_theme_map[overture_type]
-    return f"overturemaps-us-west-2/release/2024-12-18.0/theme={theme}/type={overture_type}/"
-
+    if version is None or version == "latest":
+        version = "2025-01-22.0"
+    return f"overturemaps-us-west-2/release/{version}/theme={theme}/type={overture_type}/"
 
 def get_all_overture_types() -> List[str]:
     return list(type_theme_map.keys())
